@@ -12,6 +12,12 @@ pipeline {
     }
 
     stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/nihalcomviva/simple-node-js-react-npm-app.git'
+            }
+        }
+
         stage('Pull Base Images') {
             steps {
                 script {
@@ -20,6 +26,17 @@ pipeline {
                         sh 'docker pull redis:latest'
                         sh 'docker pull mongo:latest'
                         sh 'docker pull mongo-express:latest'
+                    }
+                }
+            }
+        }
+
+        stage('Prepare Build Environment') {
+            steps {
+                script {
+                    // Download mongo-express if not present
+                    if (!fileExists('mongo-express')) {
+                        sh 'curl -L https://github.com/mongo-express/mongo-express/archive/refs/heads/master.tar.gz | tar -xzf - && mv mongo-express-master mongo-express'
                     }
                 }
             }
@@ -46,12 +63,7 @@ pipeline {
 
                     writeFile file: 'Dockerfile', text: dockerfile
 
-                    // Check if mongo-express directory exists
-                    if (fileExists('/path/to/mongo-express')) {
-                        sh 'docker build -t my-multi-service-image .'
-                    } else {
-                        error 'mongo-express directory not found!'
-                    }
+                    sh 'docker build -t my-multi-service-image .'
                 }
             }
         }
