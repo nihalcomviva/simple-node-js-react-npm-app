@@ -46,7 +46,12 @@ pipeline {
 
                     writeFile file: 'Dockerfile', text: dockerfile
 
-                    sh 'docker build -t my-multi-service-image .'
+                    // Check if mongo-express directory exists
+                    if (fileExists('/path/to/mongo-express')) {
+                        sh 'docker build -t my-multi-service-image .'
+                    } else {
+                        error 'mongo-express directory not found!'
+                    }
                 }
             }
         }
