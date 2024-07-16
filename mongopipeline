@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = 'localhost:5000'
+        DOCKER_CREDENTIALS_ID = 'local-docker-registry'
+        MONGO_EXPRESS_USERNAME = 'ati'
+        MONGO_EXPRESS_PASSWORD = 'ati1234'
+    }
+
+    stages {
+        stage('Pull and Build Images') {
+            steps {
+                script {
+                    // Pull latest images from Docker Hub
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                        sh 'docker pull postgres:latest'
+                        sh 'docker pull redis:latest'
+                        sh 'docker pull mongo:latest'
+                        sh 'docker pull mongo-express:latest'
+                    }
+
+                    // Build Docker images locally
+                    sh 'docker build -t my-postgres-image postgres/'
+                    sh 'docker build -t my-redis-image redis/'
+                    sh 'docker build -t my-mongo-image mongo/'
+                    sh 'docker build -t my-mongo-express-image mongo-express/'
+                }
+            }
+        }
+
+        stage('Push Images to Local Registry') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "docker tag my-postgres-image ${DOCKER_REGISTRY}/my-postgres-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-postgres-image:latest"
+
+                        sh "docker tag my-redis-image ${DOCKER_REGISTRY}/my-redis-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-redis-image:latest"
+
+                        sh "docker tag my-mongo-image ${DOCKER_REGISTRY}/my-mongo-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-image:latest"
+
+                        sh "docker tag my-mongo-express-image ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Configure and Run Containers') {
+            steps {
+                script {
+                    // Run containers with environment variables
+                    sh '''
+                    docker run -d \
+                        -e POSTGRES_PASSWORD=mysecretpassword \
+                        -e POSTGRES_DB=mydatabase \
+                        --name postgres-db \
+                        ${DOCKER_REGISTRY}/my-postgres-image:latest
+
+                    docker run -d \
+                        --name redis-db \
+                        ${DOCKER_REGISTRY}/my-redis-image:latest
+
+                    docker run -d \
+                        -e MONGO_INITDB_ROOT_USERNAME=${MONGO_EXPRESS_USERNAME} \
+                        -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_EXPRESS_PASSWORD} \
+                        --name mongo-db \
+                        ${DOCKER_REGISTRY}/my-mongo-image:latest
+
+                    docker run -d \
+                        -e ME_CONFIG_MONGODB_SERVER=mongo-db \
+                        -e ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_EXPRESS_USERNAME} \
+                        -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_EXPRESS_PASSWORD} \
+                        --name mongo-express-app \
+                        -p 8081:8081 \
+                        ${DOCKER_REGISTRY}/my-mongo-express-image:latest
+                    '''
+                }
+            }
+        }
+    }
+}
+
