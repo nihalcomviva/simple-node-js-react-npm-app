@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = 'localhost:5000'
+        DOCKER_CREDENTIALS_ID = 'local-docker-registry'
+        MONGO_EXPRESS_PORT = 8081
+        MONGO_PORT = 27017
+    }
+
+    stages {
+        stage('Build and Push Images') {
+            steps {
+                script {
+                    // Using withCredentials to securely access Docker registry credentials
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+
+                        // Pull and tag PostgreSQL image
+                        sh "docker pull postgres:latest"
+                        sh "docker tag postgres:latest ${DOCKER_REGISTRY}/postgres:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/postgres:latest"
+
+                        // Pull and tag Redis image
+                        sh "docker pull redis:latest"
+                        sh "docker tag redis:latest ${DOCKER_REGISTRY}/redis:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/redis:latest"
+
+                        // Pull and tag Mongo Express image
+                        sh "docker pull mongo-express:latest"
+                        sh "docker tag mongo-express:latest ${DOCKER_REGISTRY}/mongo-express:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/mongo-express:latest"
+
+                        // Pull and tag MongoDB image
+                        sh "docker pull mongo:latest"
+                        sh "docker tag mongo:latest ${DOCKER_REGISTRY}/mongo:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/mongo:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Run Containers') {
+            steps {
+                script {
+                    // Run PostgreSQL container
+                    sh "docker run -d -p 5432:5432 --name postgres ${DOCKER_REGISTRY}/postgres:latest"
+
+                    // Run Redis container
+                    sh "docker run -d -p 6379:6379 --name redis ${DOCKER_REGISTRY}/redis:latest"
+
+                    // Run MongoDB container
+                    sh "docker run -d -p ${MONGO_PORT}:${MONGO_PORT} --name mongo ${DOCKER_REGISTRY}/mongo:latest"
+
+                    // Run Mongo Express container and connect to MongoDB
+                    sh "docker run -d -p ${MONGO_EXPRESS_PORT}:8081 --name mongo-express --link mongo:mongo -e ME_CONFIG_MONGODB_SERVER=mongo -e ME_CONFIG_BASICAUTH_USERNAME=ati -e ME_CONFIG_BASICAUTH_PASSWORD=ati1234 ${DOCKER_REGISTRY}/mongo-express:latest"
+                }
+            }
+        }
+    }
+}
+
