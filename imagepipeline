@@ -60,16 +60,16 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh "docker tag my-postgres-image ${DOCKER_REGISTRY}/my-postgres-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-postgres-image:latest"
+                        sh "docker push http://${DOCKER_REGISTRY}/my-postgres-image:latest"
 
                         sh "docker tag my-redis-image ${DOCKER_REGISTRY}/my-redis-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-redis-image:latest"
+                        sh "docker push http://${DOCKER_REGISTRY}/my-redis-image:latest"
 
                         sh "docker tag my-mongo-image ${DOCKER_REGISTRY}/my-mongo-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-image:latest"
+                        sh "docker push http://${DOCKER_REGISTRY}/my-mongo-image:latest"
 
                         sh "docker tag my-mongo-express-image ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                        sh "docker push http://${DOCKER_REGISTRY}/my-mongo-express-image:latest"
                     }
                 }
             }
