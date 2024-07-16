@@ -4,55 +4,60 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'localhost:5000'
         DOCKER_CREDENTIALS_ID = 'local-docker-registry'
-        MONGO_EXPRESS_PORT = 8081
-        MONGO_PORT = 27017
+        MONGO_INITDB_DATABASE = 'mydatabase'
+        MONGO_INITDB_ROOT_USERNAME = 'ati'
+        MONGO_INITDB_ROOT_PASSWORD = 'ati1234'
+        MONGO_EXPRESS_USERNAME = 'ati'
+        MONGO_EXPRESS_PASSWORD = 'ati1234'
     }
 
     stages {
-        stage('Build and Push Images') {
+        stage('Pull Base Images') {
             steps {
                 script {
-                    // Using withCredentials to securely access Docker registry credentials
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-
-                        // Pull and tag PostgreSQL image
-                        sh "docker pull postgres:latest"
-                        sh "docker tag postgres:latest ${DOCKER_REGISTRY}/postgres:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/postgres:latest"
-
-                        // Pull and tag Redis image
-                        sh "docker pull redis:latest"
-                        sh "docker tag redis:latest ${DOCKER_REGISTRY}/redis:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/redis:latest"
-
-                        // Pull and tag Mongo Express image
-                        sh "docker pull mongo-express:latest"
-                        sh "docker tag mongo-express:latest ${DOCKER_REGISTRY}/mongo-express:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/mongo-express:latest"
-
-                        // Pull and tag MongoDB image
-                        sh "docker pull mongo:latest"
-                        sh "docker tag mongo:latest ${DOCKER_REGISTRY}/mongo:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/mongo:latest"
+                        sh 'docker pull postgres:latest'
+                        sh 'docker pull redis:latest'
+                        sh 'docker pull mongo:latest'
+                        sh 'docker pull mongo-express:latest'
                     }
                 }
             }
         }
 
-        stage('Run Containers') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    // Run PostgreSQL container
-                    sh "docker run -d -p 5432:5432 --name postgres ${DOCKER_REGISTRY}/postgres:latest"
+                    def dockerfile = '''
+                    FROM mongo:latest
+                    ENV MONGO_INITDB_DATABASE ${MONGO_INITDB_DATABASE}
+                    ENV MONGO_INITDB_ROOT_USERNAME ${MONGO_INITDB_ROOT_USERNAME}
+                    ENV MONGO_INITDB_ROOT_PASSWORD ${MONGO_INITDB_ROOT_PASSWORD}
 
-                    // Run Redis container
-                    sh "docker run -d -p 6379:6379 --name redis ${DOCKER_REGISTRY}/redis:latest"
+                    COPY mongo-express /opt/mongo-express
+                    EXPOSE 8081
 
-                    // Run MongoDB container
-                    sh "docker run -d -p ${MONGO_PORT}:${MONGO_PORT} --name mongo ${DOCKER_REGISTRY}/mongo:latest"
+                    # Configure mongo-express environment variables
+                    ENV ME_CONFIG_MONGODB_ADMIN_USERNAME ${MONGO_EXPRESS_USERNAME}
+                    ENV ME_CONFIG_MONGODB_ADMIN_PASSWORD ${MONGO_EXPRESS_PASSWORD}
 
-                    // Run Mongo Express container and connect to MongoDB
-                    sh "docker run -d -p ${MONGO_EXPRESS_PORT}:8081 --name mongo-express --link mongo:mongo -e ME_CONFIG_MONGODB_SERVER=mongo -e ME_CONFIG_BASICAUTH_USERNAME=ati -e ME_CONFIG_BASICAUTH_PASSWORD=ati1234 ${DOCKER_REGISTRY}/mongo-express:latest"
+                    CMD ["mongod", "--bind_ip", "0.0.0.0"] && ["node", "/opt/mongo-express/bin/mongo-express"]
+                    '''
+
+                    writeFile file: 'Dockerfile', text: dockerfile
+
+                    sh 'docker build -t my-multi-service-image .'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "docker tag my-multi-service-image ${DOCKER_REGISTRY}/my-multi-service-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-multi-service-image:latest"
+                    }
                 }
             }
         }
