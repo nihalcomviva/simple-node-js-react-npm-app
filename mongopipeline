@@ -34,6 +34,11 @@ pipeline {
         stage('Build Images') {
             steps {
                 script {
+                    // Debugging steps
+                    sh 'ls -l'
+                    sh 'pwd'
+
+                    // Build commands (update paths if needed)
                     sh 'docker build -t my-postgres-image postgres/'
                     sh 'docker build -t my-redis-image redis/'
                     sh 'docker build -t my-mongo-image -f mongo/Dockerfile mongo/'
@@ -95,4 +100,3 @@ pipeline {
         }
     }
 }
-
