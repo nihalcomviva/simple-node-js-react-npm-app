@@ -50,7 +50,7 @@ pipeline {
                     sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-image -f ${mongoDockerfile} mongo/"
 
                     // Build Mongo Express image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-express-image -f ${mongoExpressDockerfile} mongo-express/"
+                    sh "docker build -t ${DOCKER_REGISTRY}/updated-mongo-express-image -f ${mongoExpressDockerfile} mongo-express/"
                 }
             }
         }
@@ -60,16 +60,16 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh "docker tag my-postgres-image ${DOCKER_REGISTRY}/my-postgres-image:latest"
-                        sh "docker push http://${DOCKER_REGISTRY}/my-postgres-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-postgres-image:latest"
 
                         sh "docker tag my-redis-image ${DOCKER_REGISTRY}/my-redis-image:latest"
-                        sh "docker push http://${DOCKER_REGISTRY}/my-redis-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-redis-image:latest"
 
                         sh "docker tag my-mongo-image ${DOCKER_REGISTRY}/my-mongo-image:latest"
-                        sh "docker push http://${DOCKER_REGISTRY}/my-mongo-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-image:latest"
 
-                        sh "docker tag my-mongo-express-image ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
-                        sh "docker push http://${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                        sh "docker tag updated-mongo-express-image ${DOCKER_REGISTRY}/updated-mongo-express-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/updated-mongo-express-image:latest"
                     }
                 }
             }
@@ -111,7 +111,7 @@ pipeline {
                         -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_EXPRESS_PASSWORD} \
                         --name mongo-express-app \
                         -p 8081:8081 \
-                        ${DOCKER_REGISTRY}/my-mongo-express-image:latest
+                        ${DOCKER_REGISTRY}/updated-mongo-express-image:latest
                     '''
                 }
             }
