@@ -4,99 +4,34 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'localhost:5000'
         DOCKER_CREDENTIALS_ID = 'local-docker-registry'
-        MONGO_INITDB_DATABASE = 'mydatabase'
-        MONGO_INITDB_ROOT_USERNAME = 'ati'
-        MONGO_INITDB_ROOT_PASSWORD = 'ati1234'
-        MONGO_EXPRESS_USERNAME = 'ati'
-        MONGO_EXPRESS_PASSWORD = 'ati1234'
     }
 
     stages {
-        stage('Pull and Build Images') {
+        stage('Pull, Tag, and Push Images') {
             steps {
                 script {
-                    // Pull latest images from public Docker registry
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        sh 'docker pull postgres:latest'
-                        sh 'docker pull redis:latest'
-                        sh 'docker pull mongo:latest'
-                        sh 'docker pull mongo-express:latest'
-                    }
+                    def images = [
+                        "postgres:latest",
+                        "redis:latest",
+                        "mongo:latest",
+                        "mongo-express:latest"
+                    ]
 
-                    // Build Postgres image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-postgres-image -f postgres/Dockerfile.postgres postgres/"
+                    def customNames = [
+                        "postgres:latest": "my-postgres:latest",
+                        "redis:latest": "my-redis:latest",
+                        "mongo:latest": "my-mongo:latest",
+                        "mongo-express:latest": "updated-mongo-express-image:latest"
+                    ]
 
-                    // Build Redis image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-redis-image -f redis/Dockerfile.redis redis/"
-
-                    // Build Mongo image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-image -f mongo/Dockerfile.mongo mongo/"
-
-                    // Build Mongo Express image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-express-image -f mongo-express/Dockerfile.mongo-express mongo-express/"
-                }
-            }
-        }
-
-        stage('Push Images to Local Registry') {
-            steps {
-                script {
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        // Tag and push images to local Docker registry
-                        sh "docker tag postgres:latest ${DOCKER_REGISTRY}/my-postgres-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-postgres-image:latest"
-
-                        sh "docker tag redis:latest ${DOCKER_REGISTRY}/my-redis-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-redis-image:latest"
-
-                        sh "docker tag mongo:latest ${DOCKER_REGISTRY}/my-mongo-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-image:latest"
-
-                        sh "docker tag mongo-express:latest ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                        images.each { image ->
+                            def customName = customNames[image]
+                            sh "docker pull ${image}"
+                            sh "docker tag ${image} ${DOCKER_REGISTRY}/${customName}"
+                            sh "docker push ${DOCKER_REGISTRY}/${customName}"
+                        }
                     }
-                }
-            }
-        }
-
-        stage('Run Containers') {
-            steps {
-                script {
-                    // Run Postgres container
-                    sh '''
-                    docker run -d \
-                        -e POSTGRES_PASSWORD=mysecretpassword \
-                        -e POSTGRES_DB=${MONGO_INITDB_DATABASE} \
-                        --name postgres-db \
-                        ${DOCKER_REGISTRY}/my-postgres-image:latest
-                    '''
-
-                    // Run Redis container
-                    sh '''
-                    docker run -d \
-                        --name redis-db \
-                        ${DOCKER_REGISTRY}/my-redis-image:latest
-                    '''
-
-                    // Run Mongo container
-                    sh '''
-                    docker run -d \
-                        -e MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME} \
-                        -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD} \
-                        --name mongo-db \
-                        ${DOCKER_REGISTRY}/my-mongo-image:latest
-                    '''
-
-                    // Run Mongo Express container
-                    sh '''
-                    docker run -d \
-                        -e ME_CONFIG_MONGODB_SERVER=mongo-db \
-                        -e ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_EXPRESS_USERNAME} \
-                        -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_EXPRESS_PASSWORD} \
-                        --name mongo-express-app \
-                        -p 8081:8081 \
-                        ${DOCKER_REGISTRY}/my-mongo-express-image:latest
-                    '''
                 }
             }
         }
