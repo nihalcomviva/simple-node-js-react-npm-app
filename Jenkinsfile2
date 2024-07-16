@@ -12,17 +12,23 @@ pipeline {
         stage('Pull and Build Docker Images') {
             steps {
                 script {
-                    docker.withRegistry("", "${DOCKER_CREDENTIALS_ID}") {
+                    // Login to Docker registry
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} ${DOCKER_REGISTRY}"
+                        
+                        // Pull Docker images
                         sh "docker pull postgres:latest"
                         sh "docker pull redis:latest"
                         sh "docker pull mongo:latest"
                         sh "docker pull mongo-express:latest"
                         
+                        // Tag Docker images
                         sh "docker tag postgres:latest ${DOCKER_REGISTRY}/postgres:latest"
                         sh "docker tag redis:latest ${DOCKER_REGISTRY}/redis:latest"
                         sh "docker tag mongo:latest ${DOCKER_REGISTRY}/mongo:latest"
                         sh "docker tag mongo-express:latest ${DOCKER_REGISTRY}/mongo-express:latest"
                         
+                        // Push Docker images
                         sh "docker push ${DOCKER_REGISTRY}/postgres:latest"
                         sh "docker push ${DOCKER_REGISTRY}/redis:latest"
                         sh "docker push ${DOCKER_REGISTRY}/mongo:latest"
