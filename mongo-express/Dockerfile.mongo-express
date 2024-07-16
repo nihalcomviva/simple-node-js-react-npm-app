@@ -1,0 +1,12 @@
+# Use the official Mongo Express image from Docker Hub
+FROM mongo-express:latest
+
+# Set environment variables for Mongo Express
+ENV ME_CONFIG_MONGODB_SERVER=localhost
+ENV ME_CONFIG_MONGODB_PORT=27017
+ENV ME_CONFIG_BASICAUTH_USERNAME=ati
+ENV ME_CONFIG_BASICAUTH_PASSWORD=ati1234
+
+# Expose the Mongo Express port (default: 8081)
+EXPOSE 8081
+
