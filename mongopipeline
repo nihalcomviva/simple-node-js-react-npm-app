@@ -4,26 +4,39 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'localhost:5000'
         DOCKER_CREDENTIALS_ID = 'local-docker-registry'
+        MONGO_INITDB_DATABASE = 'mydatabase'
+        MONGO_INITDB_ROOT_USERNAME = 'ati'
+        MONGO_INITDB_ROOT_PASSWORD = 'ati1234'
         MONGO_EXPRESS_USERNAME = 'ati'
         MONGO_EXPRESS_PASSWORD = 'ati1234'
     }
 
     stages {
-        stage('Pull and Build Images') {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'master', url: 'https://github.com/nihalcomviva/simple-node-js-react-npm-app.git'
+            }
+        }
+
+        stage('Pull Base Images') {
             steps {
                 script {
-                    // Pull latest images from Docker Hub
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh 'docker pull postgres:latest'
                         sh 'docker pull redis:latest'
                         sh 'docker pull mongo:latest'
                         sh 'docker pull mongo-express:latest'
                     }
+                }
+            }
+        }
 
-                    // Build Docker images locally
+        stage('Build Images') {
+            steps {
+                script {
                     sh 'docker build -t my-postgres-image postgres/'
                     sh 'docker build -t my-redis-image redis/'
-                    sh 'docker build -t my-mongo-image mongo/'
+                    sh 'docker build -t my-mongo-image -f mongo/Dockerfile mongo/'
                     sh 'docker build -t my-mongo-express-image mongo-express/'
                 }
             }
@@ -52,7 +65,6 @@ pipeline {
         stage('Configure and Run Containers') {
             steps {
                 script {
-                    // Run containers with environment variables
                     sh '''
                     docker run -d \
                         -e POSTGRES_PASSWORD=mysecretpassword \
