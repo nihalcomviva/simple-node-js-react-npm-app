@@ -121,7 +121,6 @@ pipeline {
 
 // Function to check if file exists
 def fileExists(filePath) {
-    def file = new File(filePath)
-    return file.exists()
+    return readFile(filePath) != null
 }
 
