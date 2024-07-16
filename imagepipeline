@@ -12,45 +12,28 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code') {
-            steps {
-                git branch: 'master', url: 'https://github.com/nihalcomviva/simple-node-js-react-npm-app.git'
-            }
-        }
-
-        stage('Pull Base Images') {
+        stage('Pull and Build Images') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    // Pull latest images from public Docker registry
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
                         sh 'docker pull postgres:latest'
                         sh 'docker pull redis:latest'
                         sh 'docker pull mongo:latest'
                         sh 'docker pull mongo-express:latest'
                     }
-                }
-            }
-        }
-
-        stage('Build Images') {
-            steps {
-                script {
-                    // Check if Dockerfiles exist in respective directories
-                    def postgresDockerfile = fileExists('postgres/Dockerfile.postgres') ? 'postgres/Dockerfile.postgres' : 'postgres/Dockerfile'
-                    def redisDockerfile = fileExists('redis/Dockerfile.redis') ? 'redis/Dockerfile.redis' : 'redis/Dockerfile'
-                    def mongoDockerfile = fileExists('mongo/Dockerfile.mongo') ? 'mongo/Dockerfile.mongo' : 'mongo/Dockerfile'
-                    def mongoExpressDockerfile = fileExists('mongo-express/Dockerfile.mongo-express') ? 'mongo-express/Dockerfile.mongo-express' : 'mongo-express/Dockerfile'
 
                     // Build Postgres image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-postgres-image -f ${postgresDockerfile} postgres/"
+                    sh "docker build -t ${DOCKER_REGISTRY}/my-postgres-image -f postgres/Dockerfile.postgres postgres/"
 
                     // Build Redis image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-redis-image -f ${redisDockerfile} redis/"
+                    sh "docker build -t ${DOCKER_REGISTRY}/my-redis-image -f redis/Dockerfile.redis redis/"
 
                     // Build Mongo image
-                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-image -f ${mongoDockerfile} mongo/"
+                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-image -f mongo/Dockerfile.mongo mongo/"
 
                     // Build Mongo Express image
-                    sh "docker build -t ${DOCKER_REGISTRY}/updated-mongo-express-image -f ${mongoExpressDockerfile} mongo-express/"
+                    sh "docker build -t ${DOCKER_REGISTRY}/my-mongo-express-image -f mongo-express/Dockerfile.mongo-express mongo-express/"
                 }
             }
         }
@@ -59,23 +42,24 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh "docker tag my-postgres-image ${DOCKER_REGISTRY}/my-postgres-image:latest"
+                        // Tag and push images to local Docker registry
+                        sh "docker tag postgres:latest ${DOCKER_REGISTRY}/my-postgres-image:latest"
                         sh "docker push ${DOCKER_REGISTRY}/my-postgres-image:latest"
 
-                        sh "docker tag my-redis-image ${DOCKER_REGISTRY}/my-redis-image:latest"
+                        sh "docker tag redis:latest ${DOCKER_REGISTRY}/my-redis-image:latest"
                         sh "docker push ${DOCKER_REGISTRY}/my-redis-image:latest"
 
-                        sh "docker tag my-mongo-image ${DOCKER_REGISTRY}/my-mongo-image:latest"
+                        sh "docker tag mongo:latest ${DOCKER_REGISTRY}/my-mongo-image:latest"
                         sh "docker push ${DOCKER_REGISTRY}/my-mongo-image:latest"
 
-                        sh "docker tag updated-mongo-express-image ${DOCKER_REGISTRY}/updated-mongo-express-image:latest"
-                        sh "docker push ${DOCKER_REGISTRY}/updated-mongo-express-image:latest"
+                        sh "docker tag mongo-express:latest ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
+                        sh "docker push ${DOCKER_REGISTRY}/my-mongo-express-image:latest"
                     }
                 }
             }
         }
 
-        stage('Configure and Run Containers') {
+        stage('Run Containers') {
             steps {
                 script {
                     // Run Postgres container
@@ -111,16 +95,11 @@ pipeline {
                         -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_EXPRESS_PASSWORD} \
                         --name mongo-express-app \
                         -p 8081:8081 \
-                        ${DOCKER_REGISTRY}/updated-mongo-express-image:latest
+                        ${DOCKER_REGISTRY}/my-mongo-express-image:latest
                     '''
                 }
             }
         }
     }
-}
-
-// Function to check if file exists
-def fileExists(filePath) {
-    return readFile(filePath) != null
 }
 
