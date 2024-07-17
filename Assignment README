@@ -1,0 +1,48 @@
+Overview
+
+This repository contains the implementation of backend engineering tasks focusing on Jenkins, Docker, and Kubernetes setup.
+Assignment Tasks:
+	1. Jenkins Integration:
+		○ Forked the simple-node-js-react-npm-app repository.
+		○ Implemented Jenkins pipeline (Jenkinsfile) to fetch npm packages, build the website, and serve it locally.
+		○ Website accessible on:
+			§ Localhost:3004 (Website)
+			§ Localhost:3000 (Jenkins Server)
+		○ Annotations of npm packages used and a button to trigger the build process.
+	2. Docker Setup:
+    ○ Built a local docker registry to store images:
+		○ Created Docker pipeline (imagepipeline) in the repository to:
+			§ Pull latest PostgreSQL, Redis, MongoDB, and Mongo Express images from public Docker registry.
+			§ Built these images locally as containers.
+			§ Hosted them in a secured local Docker registry using credentials:
+				□ Username: ati
+				□ Password: ati1234
+		○ Detailed setup and security implemented.
+	3. Kubernetes (K8s) Cluster Setup:
+		○ Configured a K8s cluster with one node (AWS/Local).
+		○ Deployed interconnected pods using Kubernetes deployment YAML (services_host/deployment.yml):
+			§ fleet_manager
+			§ postgresql
+			§ Nginx
+			§ Redis
+			§ MongoDB
+			§ Grafana
+			
+		○ Established connections between MongoDB and Mongo Express using provided access credentials.
+		○ Configured Nginx service to route externally to localhost on port 80, displaying "welcome to nginx" page.
+	4. Artifacts :
+		○ Comprehensive documentation and output screenshots provided in artifacts.pdf.
+Repository Link
+https://github.com/nihalcomviva/simple-node-js-react-npm-app/tree/master
+Detailed Implementation
+	• Jenkins Integration:
+		○ Installed Jenkins on the master node and configured it to run on port 3000.
+		○ Created and executed the Jenkins pipeline for the first task.
+	• Docker Setup:
+		○ Implemented Docker pipeline to manage images as per assignment requirements.
+		○ Secured the local Docker registry with provided credentials.
+	• Kubernetes (K8s) Cluster Setup:
+		○ Used Kubespray to set up a K8s cluster on two EC2 instances (master and worker nodes).
+		○ Deployed pods and services, ensuring connectivity and functionality.
+Conclusion
+All assignment tasks have been completed successfully, 
