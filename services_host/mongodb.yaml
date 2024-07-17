@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mongodb
+spec:
+  containers:
+    - name: mongodb
+      image: localhost:5000/my-mongo:latest
+      env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: ati
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: ati1234
+

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fleet-manager
+spec:
+  containers:
+    - name: fleet-manager
+      image: localhost:5000/fleet-manager:latest
+
